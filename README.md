@@ -1,6 +1,6 @@
 # Parallel Matrix-Vector Multiplication
 
-A parallel matrix-vector multiplication and vector dot-product implementation developed in C using POSIX threads.
+A self-contained C implementation of parallel matrix-vector multiplication and vector dot-product calculation using POSIX threads.
 
 ## Overview
 
@@ -9,28 +9,139 @@ The program performs two calculations:
 1. Matrix-vector multiplication to calculate `v = M × u`
 2. The dot product of the resulting vector with itself
 
-The matrix rows are divided between multiple worker threads. Each thread calculates its assigned section of the output vector and produces a partial dot-product result.
+The matrix rows are divided between multiple worker threads. Each worker calculates its assigned portion of the output vector and produces a partial dot-product result.
 
-The main thread waits for the workers to complete and combines their partial results.
+The main thread waits for all workers to complete and combines their partial results.
+
+## Features
+
+- Configurable matrix size and thread count
+- POSIX thread creation and joining
+- Dynamic distribution of matrix rows
+- Correct handling when rows are not evenly divisible between threads
+- Per-thread partial dot-product calculations
+- Serial implementation for validation
+- Parallel and serial performance measurement
+- Numerical comparison of parallel and serial results
+- Input validation and memory-allocation checks
+- Error handling for thread creation and joining
+- Automated build and validation through GitHub Actions
 
 ## Parallel Approach
 
 Each worker thread receives:
 
-- A unique thread identifier
 - Its starting matrix row
 - Its ending matrix row
-- The matrix and input vector
-- The shared output vector
+- The matrix size
+- A shared read-only matrix
+- A shared read-only input vector
+- A shared output vector
 - Storage for its partial dot-product result
 
-The main program then:
+Rows are assigned using:
 
-1. Creates the requested number of threads.
-2. Divides the matrix rows between them.
-3. Waits for every thread using `pthread_join`.
-4. Combines the partial dot products.
-5. Verifies the result against a serial implementation.
+```c
+start_row = (size * thread) / thread_count;
+end_row = (size * (thread + 1)) / thread_count;
+```
+
+This distributes remainder rows correctly when the matrix size is not evenly divisible by the number of threads.
+
+Each worker writes only to its own section of the output vector, so no mutex is required.
+
+## Repository Structure
+
+```text
+parallel-matrix-vector-multiplication/
+├── .github/
+│   └── workflows/
+│       └── build.yml
+├── src/
+│   └── parallel_matrix_vector.c
+├── .gitignore
+├── Makefile
+├── README.md
+└── RESULTS.md
+```
+
+## Requirements
+
+- GCC or another C11-compatible compiler
+- POSIX threads
+- GNU Make
+- A Linux, macOS or compatible Unix-like environment
+
+## Build
+
+```bash
+make
+```
+
+This produces:
+
+```text
+parallel_matrix_vector
+```
+
+## Run
+
+The program accepts the matrix size and number of threads:
+
+```bash
+./parallel_matrix_vector <matrix-size> <thread-count>
+```
+
+Example:
+
+```bash
+./parallel_matrix_vector 1000 4
+```
+
+## Test
+
+Run the included validation tests:
+
+```bash
+make test
+```
+
+The test target executes the program with one, two and four threads.
+
+## Example Output
+
+```text
+Matrix size: 1000 x 1000
+Threads: 4
+Parallel dot product: ...
+Serial dot product: ...
+Parallel time: ... seconds
+Serial time: ... seconds
+Speed-up: ...x
+Maximum vector difference: ...
+Dot-product difference: ...
+Validation: PASS
+```
+
+Exact timings depend on the processor, available CPU cores, compiler optimisation and current system load.
+
+## Validation
+
+The program performs the calculation twice:
+
+1. Using POSIX worker threads
+2. Using a serial implementation
+
+It then compares:
+
+- Every value in the resulting output vectors
+- The final dot-product values
+
+Small floating-point differences may occur because the parallel and serial versions combine values in a different order.
+
+## Performance Results
+
+Original coursework measurements and a template for recording new benchmarks are available in [RESULTS.md](RESULTS.md).
 
 ## Technical Concepts
 
@@ -41,36 +152,29 @@ The main program then:
 - Shared-memory programming
 - Matrix-vector multiplication
 - Dot-product calculation
+- Dynamic memory management
 - Serial and parallel validation
 - Performance benchmarking
-
-## Performance Results
-
-The program was tested three times with each thread count.
-
-| Threads | Mean execution time | Speed-up |
-|---:|---:|---:|
-| 1 | 0.3800 seconds | 1.00 |
-| 2 | 0.3754 seconds | 1.01 |
-| 4 | 0.3694 seconds | 1.03 |
-
-## Analysis
-
-The parallel implementation produced the same result as the serial implementation.
-
-The measured performance improvement was modest. This demonstrated that thread creation, coordination and joining introduce overhead, and that parallelisation does not automatically produce a large speed-up for every workload or problem size.
+- Floating-point comparison
+- Error handling
 
 ## What I Learned
 
-This project developed my understanding of:
+This project strengthened my understanding of:
 
 - Dividing computational work between threads
 - Coordinating concurrent execution
-- Combining partial results safely
-- Validating parallel output
-- Measuring performance
-- Evaluating the trade-off between parallelism and overhead
+- Combining partial results
+- Avoiding unnecessary synchronisation
+- Validating parallel output against a serial implementation
+- Measuring execution performance
+- Understanding thread-management overhead
+- Writing safer and more portable C code
 
-## Source Code
+## Project Origin
 
-The original implementation was produced as assessed university coursework and relies on a university-provided helper file. The full source is kept private to respect academic-integrity requirements, but I would be happy to discuss the implementation during an interview.
+This repository contains a self-contained portfolio refactor based on concepts from completed University of Leeds Computer Science coursework.
+
+The original exercise relied on a university-provided helper file. This version replaces that dependency with my own argument parsing, memory management, initialisation, timing and validation logic.
+
+The university-provided starter files, assessment brief, tests and marking materials are not included.
