@@ -1,0 +1,9 @@
+parallel_matrix_vector
+*.o
+*.out
+
+.vscode/
+.idea/
+
+.DS_Store
+Thumbs.db
